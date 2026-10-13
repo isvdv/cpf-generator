@@ -8,6 +8,7 @@ App offline e monocromático que gera CPFs matematicamente válidos para testes 
 - Alternar máscara (000.000.000-00 / só números)
 - Copiar tudo, compartilhar lista, tocar no item para copiar
 - Geração dos dois dígitos verificadores conforme o algoritmo oficial do CPF
+- Notificação com o número, botão Copiar e botão Novo
 - Sem duplicatas, SecureRandom, lista otimizada (ListView), mantém estado ao girar a tela
 - Respeita barras do sistema (Android 15), ícone próprio, release com minify
 

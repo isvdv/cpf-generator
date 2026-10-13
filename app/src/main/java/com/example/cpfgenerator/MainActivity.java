@@ -8,6 +8,10 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.Manifest;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -23,7 +27,6 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -39,11 +42,11 @@ public class MainActivity extends Activity {
     private static final int GRAY = Color.rgb(175, 175, 175);
     private static final int[] QUANTITIES = {10, 50, 100, 500};
 
-    private final SecureRandom random = new SecureRandom();
     private final List<String> samples = new ArrayList<>(); // sempre só dígitos (11)
     private int quantity = 100;
     private int region = -1; // -1 = aleatório
     private boolean formatted = true;
+    private String shown; // número exibido na notificação
 
     private TextView countText;
     private ListView listView;
@@ -60,6 +63,12 @@ public class MainActivity extends Activity {
             List<String> saved = savedInstanceState.getStringArrayList("samples");
             if (saved != null) samples.addAll(saved);
         }
+        if (savedInstanceState == null) {
+            SharedPreferences sp = getSharedPreferences("settings", MODE_PRIVATE);
+            region = sp.getInt("region", -1);
+            formatted = sp.getBoolean("formatted", true);
+        }
+        requestNotificationPermission();
         buildUi();
         if (samples.isEmpty()) generate(false); else refresh();
     }
@@ -75,56 +84,42 @@ public class MainActivity extends Activity {
 
     // ---------- Geração ----------
 
-    private static int checkDigit(int[] d, int len) {
-        int sum = 0;
-        for (int i = 0; i < len; i++) sum += d[i] * (len + 1 - i);
-        int r = (sum * 10) % 11;
-        return r == 10 ? 0 : r;
-    }
-
-    /** Retorna true se os 11 dígitos formam um CPF matematicamente válido. */
-    private static boolean isValid(int[] d) {
-        boolean allEqual = true;
-        for (int i = 1; i < 11; i++) if (d[i] != d[0]) { allEqual = false; break; }
-        if (allEqual) return false;
-        return checkDigit(d, 9) == d[9] && checkDigit(d, 10) == d[10];
-    }
-
-    private String createOne() {
-        int[] d = new int[11];
-        do {
-            for (int i = 0; i < 8; i++) d[i] = random.nextInt(10);
-            d[8] = region >= 0 ? region : random.nextInt(10);
-            d[9] = checkDigit(d, 9);
-            d[10] = checkDigit(d, 10);
-        } while (!isValid(d));
-        StringBuilder sb = new StringBuilder(11);
-        for (int v : d) sb.append(v);
-        return sb.toString();
-    }
-
     private void generate(boolean toast) {
         samples.clear();
         java.util.HashSet<String> seen = new java.util.HashSet<>();
         while (samples.size() < quantity) {
-            String s = createOne();
+            String s = CpfFactory.create(region);
             if (seen.add(s)) samples.add(s);
         }
+        shown = samples.get(0);
         refresh();
         listView.setSelection(0);
         if (toast) toast(quantity + " CPFs válidos gerados");
     }
 
-    private String format(String raw) {
-        if (!formatted) return raw;
-        return raw.substring(0, 3) + "." + raw.substring(3, 6) + "." +
-                raw.substring(6, 9) + "-" + raw.substring(9, 11);
-    }
+    private String format(String raw) { return CpfFactory.format(raw, formatted); }
 
     private String allAsText() {
         StringBuilder sb = new StringBuilder();
         for (String s : samples) sb.append(format(s)).append('\n');
         return sb.toString().trim();
+    }
+
+    // ---------- Notificação ----------
+
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
+        super.onRequestPermissionsResult(code, perms, results);
+        if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED && shown != null) {
+            NotificationHelper.show(this, shown, formatted);
+        }
     }
 
     // ---------- Ações ----------
@@ -260,8 +255,11 @@ public class MainActivity extends Activity {
         listView.setSelector(android.R.color.transparent);
         adapter = new SamplesAdapter();
         listView.setAdapter(adapter);
-        listView.setOnItemClickListener((p, v, pos, id) ->
-                copy("CPF válido de teste", format(samples.get(pos))));
+        listView.setOnItemClickListener((p, v, pos, id) -> {
+            shown = samples.get(pos);
+            copy("CPF válido de teste", format(shown));
+            NotificationHelper.show(this, shown, formatted);
+        });
         root.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
 
         setContentView(root);
@@ -279,6 +277,10 @@ public class MainActivity extends Activity {
         countText.setText(String.format(Locale.getDefault(), "%d registros de teste", samples.size()));
         updateQtyButtons();
         if (adapter != null) adapter.notifyDataSetChanged();
+        getSharedPreferences("settings", MODE_PRIVATE).edit()
+                .putInt("region", region).putBoolean("formatted", formatted).apply();
+        if (shown == null && !samples.isEmpty()) shown = samples.get(0);
+        if (shown != null) NotificationHelper.show(this, shown, formatted);
     }
 
     private class SamplesAdapter extends BaseAdapter {
