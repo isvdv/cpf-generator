@@ -1,0 +1,32 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.example.cpfgenerator'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.example.cpfgenerator'
+        minSdk 23
+        targetSdk 35
+        versionCode 2
+        versionName '2.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            // Assinado com a chave de debug para facilitar a instalação direta.
+            // Para publicar na Play Store, configure seu próprio keystore.
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
