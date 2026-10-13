@@ -1,13 +1,13 @@
 # CPF Generator (Android) v2.0
 
-App offline e monocromático que gera números **fictícios** no formato de CPF para testes de layout/UI. Os números nunca passam na validação oficial (o dígito verificador é sempre ajustado se coincidir com um válido).
+App offline e monocromático que gera CPFs matematicamente válidos para testes de layout/UI. A validade dos dígitos verificadores não confirma existência ou cadastro real.
 
 ## Novidades da v2.0
 - Quantidade selecionável: 10 / 50 / 100 / 500
 - Escolha do 9º dígito (região) ou aleatório
 - Alternar máscara (000.000.000-00 / só números)
 - Copiar tudo, compartilhar lista, tocar no item para copiar
-- Correção: antes ~1% dos números gerados podiam ser CPFs válidos por acaso
+- Geração dos dois dígitos verificadores conforme o algoritmo oficial do CPF
 - Sem duplicatas, SecureRandom, lista otimizada (ListView), mantém estado ao girar a tela
 - Respeita barras do sistema (Android 15), ícone próprio, release com minify
 

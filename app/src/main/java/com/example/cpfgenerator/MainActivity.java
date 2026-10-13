@@ -29,9 +29,8 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Gerador de números FICTÍCIOS no formato de CPF, para testes de interface/layout.
- * Os dígitos verificadores são calculados apenas para garantir que o resultado
- * NUNCA seja um CPF válido (o DV é sempre alterado caso coincida com o correto).
+ * Gerador de CPFs matematicamente válidos para testes de interface/layout.
+ * A validade dos dígitos verificadores não confirma existência ou cadastro real.
  */
 public class MainActivity extends Activity {
     private static final int BLACK = Color.BLACK;
@@ -93,12 +92,12 @@ public class MainActivity extends Activity {
 
     private String createOne() {
         int[] d = new int[11];
-        for (int i = 0; i < 8; i++) d[i] = random.nextInt(10);
-        d[8] = region >= 0 ? region : random.nextInt(10);
-        d[9] = random.nextInt(10);
-        d[10] = random.nextInt(10);
-        // Garante que o número gerado nunca seja válido.
-        while (isValid(d)) d[10] = (d[10] + 1 + random.nextInt(9)) % 10;
+        do {
+            for (int i = 0; i < 8; i++) d[i] = random.nextInt(10);
+            d[8] = region >= 0 ? region : random.nextInt(10);
+            d[9] = checkDigit(d, 9);
+            d[10] = checkDigit(d, 10);
+        } while (!isValid(d));
         StringBuilder sb = new StringBuilder(11);
         for (int v : d) sb.append(v);
         return sb.toString();
@@ -113,7 +112,7 @@ public class MainActivity extends Activity {
         }
         refresh();
         listView.setSelection(0);
-        if (toast) toast(quantity + " números fictícios gerados");
+        if (toast) toast(quantity + " CPFs válidos gerados");
     }
 
     private String format(String raw) {
@@ -190,7 +189,7 @@ public class MainActivity extends Activity {
         });
 
         root.addView(text("CPF Generator", 26, WHITE, true));
-        root.addView(text("Dados fictícios para testes", 14, GRAY, false),
+        root.addView(text("CPFs válidos para testes", 14, GRAY, false),
                 lp(-1, -2, 0, 0, dp(2), 0, 0));
 
         countText = text("", 16, WHITE, true);
@@ -246,13 +245,13 @@ public class MainActivity extends Activity {
         actions.addView(button("Gerar novos", WHITE, BLACK, () -> generate(true)),
                 lp(0, -2, 1.3f, dp(2), 0, dp(2), 0));
         actions.addView(button("Copiar tudo", Color.rgb(55, 55, 55), WHITE,
-                () -> copy("Lista de números fictícios", allAsText())),
+                () -> copy("Lista de CPFs válidos", allAsText())),
                 lp(0, -2, 1f, dp(2), 0, dp(2), 0));
         actions.addView(button("Enviar", Color.rgb(55, 55, 55), WHITE, this::share),
                 lp(0, -2, 0.8f, dp(2), 0, dp(2), 0));
         root.addView(actions);
 
-        root.addView(text("Os números são fictícios e nunca passam na validação oficial do CPF. " +
+        root.addView(text("Os dígitos verificadores são válidos, mas isso não confirma cadastro real. " +
                         "Toque em um item para copiá-lo.", 12, GRAY, false),
                 lp(-1, -2, 0, 0, dp(8), 0, dp(8)));
 
@@ -262,7 +261,7 @@ public class MainActivity extends Activity {
         adapter = new SamplesAdapter();
         listView.setAdapter(adapter);
         listView.setOnItemClickListener((p, v, pos, id) ->
-                copy("Número fictício de teste", format(samples.get(pos))));
+                copy("CPF válido de teste", format(samples.get(pos))));
         root.addView(listView, new LinearLayout.LayoutParams(-1, 0, 1f));
 
         setContentView(root);
