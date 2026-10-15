@@ -5,23 +5,30 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
+import android.os.Build;
 import android.widget.Toast;
 
+/** Recebe os toques na notificação. Trabalho curto e síncrono: não mantém o processo vivo. */
 public class NotificationReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-        if (NotificationHelper.ACTION_COPY.equals(action)) {
-            String text = intent.getStringExtra(NotificationHelper.EXTRA_TEXT);
-            if (text == null) return;
+        String raw = NotificationHelper.current(context);
+        if (NotificationHelper.ACTION_COPY_NEXT.equals(action)) {
+            boolean formatted = NotificationHelper.prefs(context)
+                    .getBoolean(NotificationHelper.KEY_FORMATTED, true);
+            String text = CpfFactory.format(raw, formatted);
             ClipboardManager cb = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-            cb.setPrimaryClip(ClipData.newPlainText("CPF válido de teste", text));
-            Toast.makeText(context, "Copiado: " + text, Toast.LENGTH_SHORT).show();
-        } else if (NotificationHelper.ACTION_NEW.equals(action)) {
-            SharedPreferences sp = context.getSharedPreferences("settings", Context.MODE_PRIVATE);
-            String raw = CpfFactory.create(sp.getInt("region", -1));
-            NotificationHelper.show(context, raw, sp.getBoolean("formatted", true));
+            if (cb != null) cb.setPrimaryClip(ClipData.newPlainText("CPF válido de teste", text));
+            // Android 13+ já mostra a confirmação do sistema ao copiar.
+            if (Build.VERSION.SDK_INT < 33) {
+                Toast.makeText(context, "Copiado: " + text, Toast.LENGTH_SHORT).show();
+            }
+            NotificationHelper.next(context, raw);
+            NotificationHelper.show(context, text);
+        } else if (NotificationHelper.ACTION_SKIP.equals(action)) {
+            NotificationHelper.next(context, raw);
+            NotificationHelper.show(context);
         }
     }
 }
